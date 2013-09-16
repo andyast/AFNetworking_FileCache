@@ -22,6 +22,7 @@
 
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
+#import "NSString+MD5.h"
 
 #if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
 #import "UIImageView+AFNetworking.h"
@@ -161,10 +162,29 @@ static char kAFImageRequestOperationObjectKey;
 #pragma mark -
 
 static inline NSString * AFImageCacheKeyFromURLRequest(NSURLRequest *request) {
-    return [[request URL] absoluteString];
+	NSMutableString *fileName = [NSMutableString stringWithString:[request.URL.absoluteString MD5]];
+    [fileName appendFormat:@".%@",request.URL.pathExtension ];
+    return fileName;
+
 }
 
 @implementation AFImageCache
+	
++(NSURL *)cacheDir
+	{
+		NSURL *docDir = [[[NSFileManager defaultManager] URLsForDirectory:NSCachesDirectory
+																inDomains:NSUserDomainMask] lastObject];
+		
+		NSURL *dir = [docDir URLByAppendingPathComponent:@"AFimageCache" isDirectory:YES];
+		NSError *error = nil;
+		if (![[NSFileManager defaultManager] fileExistsAtPath:dir.path])
+        [[NSFileManager defaultManager] createDirectoryAtPath:dir.path
+                                  withIntermediateDirectories:YES
+                                                   attributes:nil
+                                                        error:&error];
+		
+		return dir;
+	}
 
 - (UIImage *)cachedImageForRequest:(NSURLRequest *)request {
     switch ([request cachePolicy]) {
@@ -175,7 +195,17 @@ static inline NSString * AFImageCacheKeyFromURLRequest(NSURLRequest *request) {
             break;
     }
 
-	return [self objectForKey:AFImageCacheKeyFromURLRequest(request)];
+	UIImage *image = [self objectForKey:AFImageCacheKeyFromURLRequest(request)];
+    if (!image) {
+        //check local file storage
+        NSURL *cacheDir = [AFImageCache cacheDir];
+        cacheDir = [cacheDir URLByAppendingPathComponent:AFImageCacheKeyFromURLRequest(request)];
+        if ([[NSFileManager defaultManager] fileExistsAtPath:cacheDir.path]) {
+            image = [UIImage imageWithContentsOfFile:cacheDir.path];
+            [self setObject:image forKey:AFImageCacheKeyFromURLRequest(request)];
+        }
+    }
+	return image;
 }
 
 - (void)cacheImage:(UIImage *)image
@@ -183,7 +213,38 @@ static inline NSString * AFImageCacheKeyFromURLRequest(NSURLRequest *request) {
 {
     if (image && request) {
         [self setObject:image forKey:AFImageCacheKeyFromURLRequest(request)];
+        NSURL *cacheDir = [AFImageCache cacheDir];
+        cacheDir = [cacheDir URLByAppendingPathComponent:AFImageCacheKeyFromURLRequest(request)];
+        
+        NSData* data = nil;
+        if ([[cacheDir.pathExtension lowercaseString] isEqualToString:@"jpeg"] || [[cacheDir.pathExtension lowercaseString] isEqualToString:@"jpg"]) {
+            data = UIImageJPEGRepresentation(image,1.0);
+        }else if([[cacheDir.pathExtension lowercaseString] isEqualToString:@"png"]){
+            data = UIImagePNGRepresentation(image);
+        }
+        
+        if (data) {
+            [data writeToURL:cacheDir atomically:YES];
+        }else{
+            NSLog(@"Trying alertnate image store method: %@", request);
+            UIGraphicsBeginImageContext(image.size);
+            [image drawInRect:CGRectMake(0, 0, image.size.width, image.size.height)];
+            UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
+            UIGraphicsEndImageContext();
+            
+            if ([[cacheDir.pathExtension lowercaseString] isEqualToString:@"jpeg"] || [[cacheDir.pathExtension lowercaseString] isEqualToString:@"jpg"]) {
+                data = UIImageJPEGRepresentation(newImage,1.0);
+            }else if([[cacheDir.pathExtension lowercaseString] isEqualToString:@"png"]){
+                data = UIImagePNGRepresentation(newImage);
+            }
+            [data writeToURL:cacheDir atomically:YES];
+            //[newImage release];
+            
+            
+        }
+        
     }
+
 }
 
 @end
