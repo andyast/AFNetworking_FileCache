@@ -86,6 +86,12 @@
       location = "group:UIKit+AFNetworking"
       name = "UIKit+AFNetworking">
       <FileRef
+         location = "group:NSString+MD5.h">
+      </FileRef>
+      <FileRef
+         location = "group:NSString+MD5.m">
+      </FileRef>
+      <FileRef
          location = "group:UIKit+AFNetworking.h">
       </FileRef>
       <FileRef
