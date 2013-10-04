@@ -173,7 +173,6 @@ typedef enum {
  @return The newly-initialized HTTP client
  */
 - (id)initWithBaseURL:(NSURL *)url;
-- (id)initWithBaseURL:(NSURL *)url defaultHeaders:(NSDictionary *)headersDict;
 
 ///-----------------------------------
 /// @name Managing Reachability Status

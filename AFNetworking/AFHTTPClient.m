@@ -223,11 +223,7 @@ NSArray * AFQueryStringPairsFromKeyAndValue(NSString *key, id value) {
     @throw [NSException exceptionWithName:NSInternalInconsistencyException reason:[NSString stringWithFormat:@"%@ Failed to call designated initializer. Invoke `initWithBaseURL:` instead.", NSStringFromClass([self class])] userInfo:nil];
 }
 
-- (id)initWithBaseURL:(NSURL *)url
-{
-	return [self initWithBaseURL:url defaultHeaders:nil];
-}
-- (id)initWithBaseURL:(NSURL *)url defaultHeaders:(NSDictionary *)headersDict {
+- (id)initWithBaseURL:(NSURL *)url {
     NSParameterAssert(url);
 
     self = [super init];
@@ -247,7 +243,7 @@ NSArray * AFQueryStringPairsFromKeyAndValue(NSString *key, id value) {
 
     self.registeredHTTPOperationClassNames = [NSMutableArray array];
 
-	self.defaultHeaders = [[NSMutableDictionary alloc] initWithDictionary:headersDict copyItems:YES];
+	self.defaultHeaders = [NSMutableDictionary dictionary];
 
     // Accept-Language HTTP Header; see http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.4
     NSMutableArray *acceptLanguagesComponents = [NSMutableArray array];
