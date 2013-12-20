@@ -29,14 +29,12 @@
 #import "AFHTTPRequestOperation.h"
 #import "NSString+MD5.h"
 
-@interface AFImageCache : NSCache
-- (UIImage *)cachedImageForRequest:(NSURLRequest *)request;
-- (void)cacheImage:(UIImage *)image
-        forRequest:(NSURLRequest *)request;
+@interface AFImageCache : NSCache <AFImageCache>
 @end
 
 #pragma mark -
 
+static char kAFSharedImageCacheKey;
 static char kAFImageRequestOperationKey;
 static char kAFResponseSerializerKey;
 
@@ -57,20 +55,6 @@ static char kAFResponseSerializerKey;
     return _af_sharedImageRequestOperationQueue;
 }
 
-+ (AFImageCache *)af_sharedImageCache {
-    static AFImageCache *_af_imageCache = nil;
-    static dispatch_once_t oncePredicate;
-    dispatch_once(&oncePredicate, ^{
-        _af_imageCache = [[AFImageCache alloc] init];
-
-        [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidReceiveMemoryWarningNotification object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * __unused notification) {
-            [_af_imageCache removeAllObjects];
-        }];
-    });
-
-    return _af_imageCache;
-}
-
 - (AFHTTPRequestOperation *)af_imageRequestOperation {
     return (AFHTTPRequestOperation *)objc_getAssociatedObject(self, &kAFImageRequestOperationKey);
 }
@@ -85,6 +69,27 @@ static char kAFResponseSerializerKey;
 
 @implementation UIImageView (AFNetworking)
 @dynamic imageResponseSerializer;
+
++ (id <AFImageCache>)sharedImageCache {
+    static AFImageCache *_af_defaultImageCache = nil;
+    static dispatch_once_t oncePredicate;
+    dispatch_once(&oncePredicate, ^{
+        _af_defaultImageCache = [[AFImageCache alloc] init];
+
+        [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidReceiveMemoryWarningNotification object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * __unused notification) {
+            [_af_defaultImageCache removeAllObjects];
+        }];
+    });
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu"
+    return objc_getAssociatedObject(self, &kAFSharedImageCacheKey) ?: _af_defaultImageCache;
+#pragma clang diagnostic pop
+}
+
++ (void)setSharedImageCache:(id<AFImageCache>)imageCache {
+    objc_setAssociatedObject(self, &kAFSharedImageCacheKey, imageCache, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
 
 - (id <AFURLResponseSerialization>)imageResponseSerializer {
     static id <AFURLResponseSerialization> _af_defaultImageResponseSerializer = nil;
@@ -125,7 +130,7 @@ static char kAFResponseSerializerKey;
 {
     [self cancelImageRequestOperation];
 
-    UIImage *cachedImage = [[[self class] af_sharedImageCache] cachedImageForRequest:urlRequest];
+    UIImage *cachedImage = [[[self class] sharedImageCache] cachedImageForRequest:urlRequest];
     if (cachedImage) {
         if (success) {
             success(nil, nil, cachedImage);
@@ -150,7 +155,7 @@ static char kAFResponseSerializerKey;
                 }
             }
 
-            [[[strongSelf class] af_sharedImageCache] cacheImage:responseObject forRequest:urlRequest];
+            [[[strongSelf class] sharedImageCache] cacheImage:responseObject forRequest:urlRequest];
         } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
             if ([[urlRequest URL] isEqual:[operation.request URL]]) {
                 if (failure) {
