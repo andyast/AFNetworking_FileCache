@@ -1,6 +1,6 @@
 //
 //  NSString+MD5.h
-//  ArtistSignal
+//  
 //
 //  Created by Andy Steinmann on 9/5/12.
 //
