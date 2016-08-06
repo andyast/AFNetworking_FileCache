@@ -186,6 +186,22 @@
       AFCachedImage* cachedImage = self.cachedImages[identifier];
       image = [cachedImage accessImage];
     });
+
+    if (image != nil)
+    {
+        return image;
+    }
+
+
+    NSURL* cacheDir = [AFImageCache cacheDir];
+    cacheDir = [cacheDir URLByAppendingPathComponent:AFImageCacheKeyFromURLRequest (request)];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:cacheDir.path])
+    {
+        image = [UIImage imageWithContentsOfFile:cacheDir.path];
+        [self setObject:image forKey:AFImageCacheKeyFromURLRequest (request)];
+    }
+
+
     return image;
 }
 
