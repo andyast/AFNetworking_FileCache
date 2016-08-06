@@ -193,17 +193,29 @@
     }
 
 
-    NSURL* cacheDir = [AFImageCache cacheDir];
-    cacheDir = [cacheDir URLByAppendingPathComponent:AFImageCacheKeyFromURLRequest (request)];
+    NSURL* cacheDir = [self cacheDir];
+    cacheDir = [cacheDir URLByAppendingPathComponent:identifier];
     if ([[NSFileManager defaultManager] fileExistsAtPath:cacheDir.path])
     {
         image = [UIImage imageWithContentsOfFile:cacheDir.path];
-        [self setObject:image forKey:AFImageCacheKeyFromURLRequest (request)];
+        [self addImage:image withIdentifier:identifier];
     }
-
 
     return image;
 }
+
+
+- (NSURL*)cacheDir
+{
+    NSURL* docDir = [[[NSFileManager defaultManager] URLsForDirectory:NSCachesDirectory inDomains:NSUserDomainMask] lastObject];
+
+    NSURL* dir = [docDir URLByAppendingPathComponent:@"AFimageCache" isDirectory:YES];
+    NSError* error = nil;
+    if (![[NSFileManager defaultManager] fileExistsAtPath:dir.path]) [[NSFileManager defaultManager] createDirectoryAtPath:dir.path withIntermediateDirectories:YES attributes:nil error:&error];
+
+    return dir;
+}
+
 
 - (void)addImage:(UIImage*)image forRequest:(NSURLRequest*)request withAdditionalIdentifier:(NSString*)identifier
 {
