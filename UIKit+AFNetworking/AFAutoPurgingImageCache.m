@@ -113,6 +113,16 @@
 
 - (void)addImage:(UIImage*)image withIdentifier:(NSString*)identifier
 {
+    NSURL* cacheDir = [self cacheDir];
+    cacheDir = [cacheDir URLByAppendingPathComponent:identifier];
+    if (![[NSFileManager defaultManager] fileExistsAtPath:cacheDir.path])
+    {
+        NSData* binaryImageData = UIImagePNGRepresentation (image);
+
+        [binaryImageData writeToFile:cacheDir.path atomically:YES];
+    }
+
+
     dispatch_barrier_async (self.synchronizationQueue, ^{
       AFCachedImage* cacheImage = [[AFCachedImage alloc] initWithImage:image identifier:identifier];
 
